@@ -1,4 +1,4 @@
-From 705f942147a59c1d85c2e094cbac4477e6220cc0 Mon Sep 17 00:00:00 2001
+From f4a485eaf848ab3335fc408e50d52b2a249e8fde Mon Sep 17 00:00:00 2001
 From: Potato <nikko@faint.day>
 Date: Fri, 20 Oct 2023 23:13:42 +0800
 Subject: [PATCH 4/7] arm: dts: overlays: add uconsole
@@ -8,17 +8,20 @@ BT serial speed is set to 1500000 to improve stability of both BT and WiFi.
 
 The overlay is updated to support CM4. It accepts a parameter `cm4`, to
 disable fragments for CM3.
+
+The overlay also accepts a parameter `hwi2c` to enable the use of
+hardware I2C, which is buggy on CM3, to control PMU.
 ---
- arch/arm/boot/dts/overlays/Makefile     |   1 +
- arch/arm/boot/dts/overlays/uconsole.dts | 381 ++++++++++++++++++++++++
- 2 files changed, 382 insertions(+)
- create mode 100644 arch/arm/boot/dts/overlays/uconsole.dts
+ arch/arm/boot/dts/overlays/Makefile           |   1 +
+ .../boot/dts/overlays/uconsole-overlay.dts    | 403 ++++++++++++++++++
+ 2 files changed, 404 insertions(+)
+ create mode 100644 arch/arm/boot/dts/overlays/uconsole-overlay.dts
 
 diff --git a/arch/arm/boot/dts/overlays/Makefile b/arch/arm/boot/dts/overlays/Makefile
-index fc97bdb71e80..db5997208662 100644
+index 99c536ea4bd8..2eb8d1b9cc1f 100644
 --- a/arch/arm/boot/dts/overlays/Makefile
 +++ b/arch/arm/boot/dts/overlays/Makefile
-@@ -282,6 +282,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
+@@ -291,6 +291,7 @@ dtbo-$(CONFIG_ARCH_BCM2835) += \
  	uart4.dtbo \
  	uart4-pi5.dtbo \
  	uart5.dtbo \
@@ -26,12 +29,12 @@ index fc97bdb71e80..db5997208662 100644
  	udrc.dtbo \
  	ugreen-dabboard.dtbo \
  	upstream.dtbo \
-diff --git a/arch/arm/boot/dts/overlays/uconsole.dts b/arch/arm/boot/dts/overlays/uconsole.dts
+diff --git a/arch/arm/boot/dts/overlays/uconsole-overlay.dts b/arch/arm/boot/dts/overlays/uconsole-overlay.dts
 new file mode 100644
-index 000000000000..2b1c8a884d5b
+index 000000000000..27a49483034f
 --- /dev/null
-+++ b/arch/arm/boot/dts/overlays/uconsole.dts
-@@ -0,0 +1,381 @@
++++ b/arch/arm/boot/dts/overlays/uconsole-overlay.dts
+@@ -0,0 +1,403 @@
 +/dts-v1/;
 +/plugin/;
 +
@@ -41,20 +44,6 @@ index 000000000000..2b1c8a884d5b
 +
 +/ {
 +	compatible = "brcm,bcm2835";
-+
-+	fragment@70 {
-+		target-path = "/aliases";
-+		__overlay__ {
-+			i2c_uconsole = "/i2c@0";
-+		};
-+	};
-+
-+	fragment@71 {
-+		target-path = "/__symbols__";
-+		__overlay__ {
-+			i2c_uconsole = "/i2c@0";
-+		};
-+	};
 +
 +	fragment@80 {
 +		target-path = "/chosen";
@@ -100,17 +89,6 @@ index 000000000000..2b1c8a884d5b
 +				voltage-max-design-microvolt = <4200000>;
 +			};
 +
-+			i2c_uconsole: i2c@0 {
-+				reg = <3>;
-+				compatible = "i2c-gpio";
-+				gpios = <&gpio 0 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN) /* sda */
-+					 &gpio 1 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN) /* scl */
-+					>;
-+				i2c-gpio,delay-us = <2>;        /* ~100 kHz */
-+				#address-cells = <1>;
-+				#size-cells = <0>;
-+			};
-+
 +			/* TPS61178, the supply for 5V bus, including USB, backlight
 +			 */
 +			// uc_reg_5v0: uc-reg-5v0 {
@@ -122,6 +100,8 @@ index 000000000000..2b1c8a884d5b
 +			// };
 +		};
 +	};
++
++	// 91 to 93 are for the on board wireless module
 +
 +	fragment@91 {
 +		/* BT */
@@ -184,8 +164,200 @@ index 000000000000..2b1c8a884d5b
 +		};
 +	};
 +
++	// 94-97 handles i2c bus selection
++
++	fragment@94 {
++		target-path = "/";
++		__overlay__ {
++			i2c_uconsole_sw: i2c@100 {
++				reg = <100>;
++				compatible = "i2c-gpio";
++				gpios = <&gpio 0 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN) /* sda */
++						 &gpio 1 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN) /* scl */
++					>;
++				i2c-gpio,delay-us = <2>;        /* ~100 kHz */
++				#address-cells = <1>;
++				#size-cells = <0>;
++			};
++		};
++	};
++
++	fragment@95 {
++		target = <&i2c0>;
++		i2c_uconsole_hw0: __dormant__ {
++			status = "okay";
++		};
++	};
++
++	fragment@96 {
++		target = <&i2c0if>;
++		__dormant__ {
++			status = "okay";
++		};
++	};
++
++	fragment@97 {
++		target = <&i2c0mux>;
++		__dormant__ {
++			status = "okay";
++		};
++	};
++
++	// Here's the one for PMU
++	// since we use i2c selection, pmu fragment's target should be editable
++	frag_pmu: fragment@101 {
++		/* PMU */
++		target = <&i2c_uconsole_sw>;
++		__overlay__ {
++			axp22x: pmic@34 {
++				interrupt-controller;
++				#interrupt-cells = <1>;
++				compatible = "x-powers,axp228", "x-powers,axp223", "x-powers,axp221";
++				reg = <0x34>; /* i2c address */
++				interrupt-parent = <&gpio>;
++				interrupts = <2 8>;  /* IRQ_TYPE_LEVEL_LOW */
++				irq-gpios = <&gpio 2 0>;
++
++				/* TODO: figure out the initial output states */
++				regulators {
++
++					x-powers,dcdc-freq = <3000>;
++
++					reg_dcdc1: dcdc1 {
++						regulator-name = "sys-3v3";
++						regulator-always-on;
++						regulator-min-microvolt = <3300000>;
++						regulator-max-microvolt = <3300000>;
++					};
++
++					reg_dcdc3: dcdc3 {
++						regulator-name = "sys-1v8";
++						regulator-always-on;
++						regulator-min-microvolt = <1800000>;
++						regulator-max-microvolt = <1800000>;
++					};
++
++					/* TODO: switch this on demand? */
++					reg_aldo1: aldo1 {
++						regulator-name = "aud-3v3";
++						regulator-always-on;
++						regulator-min-microvolt = <3300000>;
++						regulator-max-microvolt = <3300000>;
++					};
++
++					reg_aldo2: aldo2 {
++						regulator-name = "disp-3v3";
++						regulator-min-microvolt = <3300000>;
++						regulator-max-microvolt = <3300000>;
++					};
++
++					/* This pull up is required to make BT stable.
++					* This pull up must set to 3.3v when voltage jumpers are not changed,
++					* or the chip will not show up.
++					* It may originate from CM3 IO refs input voltages.
++					*/
++					reg_aldo3: aldo3 {
++						regulator-name = "vdd-wifi";
++						regulator-always-on;
++						regulator-min-microvolt = <3300000>;
++						regulator-max-microvolt = <3300000>;
++					};
++
++					/* DLDO1 and ELDO1-3 are connected in parallel. */
++					/* So I think they should be left on */
++					reg_dldo1: dldo1 {
++						regulator-name = "vbat-wifi-a";
++						regulator-always-on;
++						regulator-min-microvolt = <3300000>;
++						regulator-max-microvolt = <3300000>;
++					};
++
++					/* DLDO2-DLDO4 are connected in parallel.
++					* They seem not necessary, BUT they are connected to the TPS2553's enable pin!
++					* Disable them will shutdown the USB 5V line.
++					*/
++					reg_dldo2: dldo2 {
++						regulator-name = "vcc-3v3-ext-a";
++						regulator-always-on;
++						regulator-min-microvolt = <3300000>;
++						regulator-max-microvolt = <3300000>;
++					};
++
++					reg_dldo3: dldo3 {
++						regulator-name = "vcc-3v3-ext-b";
++						regulator-always-on;
++						regulator-min-microvolt = <3300000>;
++						regulator-max-microvolt = <3300000>;
++					};
++
++					reg_dldo4: dldo4 {
++						regulator-name = "vcc-3v3-ext-c";
++						regulator-always-on;
++						regulator-min-microvolt = <3300000>;
++						regulator-max-microvolt = <3300000>;
++					};
++
++					reg_eldo1: eldo1 {
++						regulator-name = "vbat-wifi-b";
++						regulator-always-on;
++						regulator-min-microvolt = <3300000>;
++						regulator-max-microvolt = <3300000>;
++					};
++
++					reg_eldo2: eldo2 {
++						regulator-name = "vbat-wifi-c";
++						regulator-always-on;
++						regulator-min-microvolt = <3300000>;
++						regulator-max-microvolt = <3300000>;
++					};
++
++					reg_eldo3: eldo3 {
++						regulator-name = "vbat-wifi-d";
++						regulator-always-on;
++						regulator-min-microvolt = <3300000>;
++						regulator-max-microvolt = <3300000>;
++					};
++				};
++
++				battery_power_supply: battery-power-supply {
++					compatible = "x-powers,axp221-battery-power-supply";
++					monitored-battery = <&battery>;
++				};
++
++				ac_power_supply: ac_power_supply {
++					compatible = "x-powers,axp221-ac-power-supply";
++				};
++
++				axp_adc: adc {
++					compatible = "x-powers,axp221-adc";
++					#io-channel-cells = <1>;
++				};
++
++				axp_gpio: gpio {
++					compatible = "x-powers,axp221-gpio";
++					gpio-controller;
++					#gpio-cells = <2>;
++					status = "disabled";
++
++					gpio0_out: gpio0-out-pin {
++						pins = "GPIO0";
++						function = "gpio_out";
++					};
++				};
++
++				/* IPSOUT, feed to on-board buck to get 5V output */
++				/* TODO: figure out how to configure it properly */
++				usb_power_supply: usb-power {
++					compatible = "x-powers,axp221-usb-power-supply";
++				};
++			};
++		};
++	};
++
 +	__overrides__ {
-+		cm4 = <0>,"-91-92-93"; // disable BT, WiFi on uConsole main board, and other fixes for CM3
++		cm4 = <0>, "-91-92-93"; // disable BT, WiFi on uConsole main board, and other fixes for CM3
++		hwi2c = <0>, "-94+95+96+97", // disable SW i2c, enable HW i2c0
++				<&frag_pmu>, "target:0=",<&i2c_uconsole_hw0>; // move PMU from sw i2c(3) to hw i2c0
 +	};
 +};
 +
@@ -239,153 +411,6 @@ index 000000000000..2b1c8a884d5b
 +	// };
 +};
 +
-+/* PMU */
-+&i2c_uconsole {
-+
-+	axp22x: pmic@34 {
-+		interrupt-controller;
-+		#interrupt-cells = <1>;
-+		compatible = "x-powers,axp228", "x-powers,axp223", "x-powers,axp221";
-+		reg = <0x34>; /* i2c address */
-+		interrupt-parent = <&gpio>;
-+		interrupts = <2 8>;  /* IRQ_TYPE_LEVEL_LOW */
-+		irq-gpios = <&gpio 2 0>;
-+
-+		/* TODO: figure out the initial output states */
-+		regulators {
-+
-+			x-powers,dcdc-freq = <3000>;
-+
-+			reg_dcdc1: dcdc1 {
-+				regulator-name = "sys-3v3";
-+				regulator-always-on;
-+				regulator-min-microvolt = <3300000>;
-+				regulator-max-microvolt = <3300000>;
-+			};
-+
-+			reg_dcdc3: dcdc3 {
-+				regulator-name = "sys-1v8";
-+				regulator-always-on;
-+				regulator-min-microvolt = <1800000>;
-+				regulator-max-microvolt = <1800000>;
-+			};
-+
-+			/* TODO: switch this on demand? */
-+			reg_aldo1: aldo1 {
-+				regulator-name = "aud-3v3";
-+				regulator-always-on;
-+				regulator-min-microvolt = <3300000>;
-+				regulator-max-microvolt = <3300000>;
-+			};
-+
-+			reg_aldo2: aldo2 {
-+				regulator-name = "disp-3v3";
-+				regulator-min-microvolt = <3300000>;
-+				regulator-max-microvolt = <3300000>;
-+			};
-+
-+			/* This pull up is required to make BT stable.
-+			 * This pull up must set to 3.3v when voltage jumpers are not changed,
-+			 * or the chip will not show up.
-+			 * It may originate from CM3 IO refs input voltages.
-+			 */
-+			reg_aldo3: aldo3 {
-+				regulator-name = "vdd-wifi";
-+				regulator-always-on;
-+				regulator-min-microvolt = <3300000>;
-+				regulator-max-microvolt = <3300000>;
-+			};
-+
-+			/* DLDO1 and ELDO1-3 are connected in parallel. */
-+			/* So I think they should be left on */
-+			reg_dldo1: dldo1 {
-+				regulator-name = "vbat-wifi-a";
-+				regulator-always-on;
-+				regulator-min-microvolt = <3300000>;
-+				regulator-max-microvolt = <3300000>;
-+			};
-+
-+			/* DLDO2-DLDO4 are connected in parallel.
-+			 * They seem not necessary, BUT they are connected to the TPS2553's enable pin!
-+			 * Disable them will shutdown the USB 5V line.
-+			 */
-+			reg_dldo2: dldo2 {
-+				regulator-name = "vcc-3v3-ext-a";
-+				regulator-always-on;
-+				regulator-min-microvolt = <3300000>;
-+				regulator-max-microvolt = <3300000>;
-+			};
-+
-+			reg_dldo3: dldo3 {
-+				regulator-name = "vcc-3v3-ext-b";
-+				regulator-always-on;
-+				regulator-min-microvolt = <3300000>;
-+				regulator-max-microvolt = <3300000>;
-+			};
-+
-+			reg_dldo4: dldo4 {
-+				regulator-name = "vcc-3v3-ext-c";
-+				regulator-always-on;
-+				regulator-min-microvolt = <3300000>;
-+				regulator-max-microvolt = <3300000>;
-+			};
-+
-+			reg_eldo1: eldo1 {
-+				regulator-name = "vbat-wifi-b";
-+				regulator-always-on;
-+				regulator-min-microvolt = <3300000>;
-+				regulator-max-microvolt = <3300000>;
-+			};
-+
-+			reg_eldo2: eldo2 {
-+				regulator-name = "vbat-wifi-c";
-+				regulator-always-on;
-+				regulator-min-microvolt = <3300000>;
-+				regulator-max-microvolt = <3300000>;
-+			};
-+
-+			reg_eldo3: eldo3 {
-+				regulator-name = "vbat-wifi-d";
-+				regulator-always-on;
-+				regulator-min-microvolt = <3300000>;
-+				regulator-max-microvolt = <3300000>;
-+			};
-+		};
-+
-+		battery_power_supply: battery-power-supply {
-+			compatible = "x-powers,axp221-battery-power-supply";
-+			monitored-battery = <&battery>;
-+		};
-+
-+		ac_power_supply: ac_power_supply {
-+			compatible = "x-powers,axp221-ac-power-supply";
-+		};
-+
-+		axp_adc: adc {
-+			compatible = "x-powers,axp221-adc";
-+			#io-channel-cells = <1>;
-+		};
-+
-+		axp_gpio: gpio {
-+			compatible = "x-powers,axp221-gpio";
-+			gpio-controller;
-+			#gpio-cells = <2>;
-+			status = "disabled";
-+
-+			gpio0_out: gpio0-out-pin {
-+				pins = "GPIO0";
-+				function = "gpio_out";
-+			};
-+		};
-+
-+		/* IPSOUT, feed to on-board buck to get 5V output */
-+		/* TODO: figure out how to configure it properly */
-+		usb_power_supply: usb-power {
-+			compatible = "x-powers,axp221-usb-power-supply";
-+		};
-+	};
-+};
-+
 +&dsi1 {
 +	#address-cells = <1>;
 +	#size-cells = <0>;
@@ -414,5 +439,5 @@ index 000000000000..2b1c8a884d5b
 +	};
 +};
 -- 
-2.43.0
+2.44.0
 

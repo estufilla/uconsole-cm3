@@ -1,4 +1,4 @@
-From 5d93cce60cd010802121a62f38dff420974dfe7a Mon Sep 17 00:00:00 2001
+From 54a7c0fb29ee0503ad978e8a5b92a974718692d4 Mon Sep 17 00:00:00 2001
 From: Potato <nikko@faint.day>
 Date: Fri, 13 Oct 2023 11:08:40 +0800
 Subject: [PATCH 3/7] driver: staging: add uconsole simple amplifier switch
@@ -15,10 +15,10 @@ Subject: [PATCH 3/7] driver: staging: add uconsole simple amplifier switch
  create mode 100644 drivers/staging/uconsole/simple-amplifier-switch.c
 
 diff --git a/drivers/staging/Kconfig b/drivers/staging/Kconfig
-index 5cfabd5376cc..a5b88d33d3de 100644
+index f9aef39cac2e..89b845d8132c 100644
 --- a/drivers/staging/Kconfig
 +++ b/drivers/staging/Kconfig
-@@ -80,4 +80,6 @@ source "drivers/staging/qlge/Kconfig"
+@@ -78,4 +78,6 @@ source "drivers/staging/qlge/Kconfig"
  
  source "drivers/staging/vme_user/Kconfig"
  
@@ -26,7 +26,7 @@ index 5cfabd5376cc..a5b88d33d3de 100644
 +
  endif # STAGING
 diff --git a/drivers/staging/Makefile b/drivers/staging/Makefile
-index f8c3aa9c2418..4c09e021e321 100644
+index ffa70dda481d..596bbc7760f1 100644
 --- a/drivers/staging/Makefile
 +++ b/drivers/staging/Makefile
 @@ -2,6 +2,7 @@
@@ -199,5 +199,5 @@ index 000000000000..2471e035c213
 +MODULE_LICENSE("GPL v2");
 \ No newline at end of file
 -- 
-2.43.0
+2.44.0
 

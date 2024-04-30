@@ -1,4 +1,4 @@
-From 6d9f0c6cac584514a545568f7b48217fa18e573f Mon Sep 17 00:00:00 2001
+From e41b35c923b93e3c3e67a2bffaf75ed58ce787ba Mon Sep 17 00:00:00 2001
 From: Potato <nikko@faint.day>
 Date: Fri, 20 Oct 2023 23:18:19 +0800
 Subject: [PATCH 2/7] drm: panel: add clockwork cwu50
@@ -13,10 +13,10 @@ Subject: [PATCH 2/7] drm: panel: add clockwork cwu50
  create mode 100644 drivers/gpu/drm/panel/panel-clockwork-cwu50.c
 
 diff --git a/drivers/gpu/drm/panel/Kconfig b/drivers/gpu/drm/panel/Kconfig
-index 168403f59175..4a99ef1b0178 100644
+index d3109ea534fe..75c6b86581a1 100644
 --- a/drivers/gpu/drm/panel/Kconfig
 +++ b/drivers/gpu/drm/panel/Kconfig
-@@ -68,6 +68,18 @@ config DRM_PANEL_BOE_TV101WUM_NL6
+@@ -76,6 +76,18 @@ config DRM_PANEL_BOE_TV101WUM_NL6
  	  Say Y here if you want to support for BOE TV101WUM and AUO KD101N80
  	  45NA WUXGA PANEL DSI Video Mode panel
  
@@ -36,10 +36,10 @@ index 168403f59175..4a99ef1b0178 100644
  	tristate "Generic DSI command mode panels"
  	depends on OF
 diff --git a/drivers/gpu/drm/panel/Makefile b/drivers/gpu/drm/panel/Makefile
-index bc4ded65aa4b..25d9c19d9cd0 100644
+index 9dd9b3503802..549180da3e81 100644
 --- a/drivers/gpu/drm/panel/Makefile
 +++ b/drivers/gpu/drm/panel/Makefile
-@@ -5,6 +5,7 @@ obj-$(CONFIG_DRM_PANEL_ASUS_Z00T_TM5P5_NT35596) += panel-asus-z00t-tm5p5-n35596.
+@@ -6,6 +6,7 @@ obj-$(CONFIG_DRM_PANEL_AUO_A030JTN01) += panel-auo-a030jtn01.o
  obj-$(CONFIG_DRM_PANEL_BOE_BF060Y8M_AJ0) += panel-boe-bf060y8m-aj0.o
  obj-$(CONFIG_DRM_PANEL_BOE_HIMAX8279D) += panel-boe-himax8279d.o
  obj-$(CONFIG_DRM_PANEL_BOE_TV101WUM_NL6) += panel-boe-tv101wum-nl6.o
@@ -49,7 +49,7 @@ index bc4ded65aa4b..25d9c19d9cd0 100644
  obj-$(CONFIG_DRM_PANEL_SIMPLE) += panel-simple.o
 diff --git a/drivers/gpu/drm/panel/panel-clockwork-cwu50.c b/drivers/gpu/drm/panel/panel-clockwork-cwu50.c
 new file mode 100644
-index 000000000000..8eb7ec1afcbe
+index 000000000000..de886b3e0c29
 --- /dev/null
 +++ b/drivers/gpu/drm/panel/panel-clockwork-cwu50.c
 @@ -0,0 +1,573 @@
@@ -580,7 +580,7 @@ index 000000000000..8eb7ec1afcbe
 +	 * Maybe need to move part of the init sequence to cwu50_enable() instead of
 +	 * keeping them in cwu50_prepare().
 +	 */
-+	ctx->panel.prepare_upstream_first = true;
++	ctx->panel.prepare_prev_first = true;
 +
 +	drm_panel_init(&ctx->panel, dev, &cwu50_drm_funcs, DRM_MODE_CONNECTOR_DSI);
 +
@@ -627,5 +627,5 @@ index 000000000000..8eb7ec1afcbe
 +MODULE_DESCRIPTION("ClockworkPi CWU50 panel driver");
 +MODULE_LICENSE("GPL v2");
 -- 
-2.43.0
+2.44.0
 
