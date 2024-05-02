@@ -41,10 +41,17 @@ dtoverlay=uconsole
 arm_boost=1
 max_framebuffers=2
 dtoverlay=vc4-kms-v3d-pi4
-dtoverlay=uconsole,cm4
+dtoverlay=uconsole,cm4,hwi2c
+
+[cm4s]
+arm_boost=1
+max_framebuffers=2
+dtoverlay=vc4-kms-v3d-pi4
+dtoverlay=uconsole,hwi2c
 
 [all]
 # whatever you need
 "
   fi
 }
+
