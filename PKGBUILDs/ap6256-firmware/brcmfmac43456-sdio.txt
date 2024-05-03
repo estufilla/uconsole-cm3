@@ -92,18 +92,19 @@ cbfilttype=1
 fdsslevel_ch11=6
 
 ## try to improve BT audio streaming
+## however this will result in slow WiFi connection
 # ref1: https://www.infineon.com/dgdl/Infineon-AN229846_OTP_Memory_Programming_and_NVRAM_Development_CYW4373-ApplicationNotes-v02_00-EN.pdf?fileId=8ac78c8c7cdc391c017d0d3a15ab671b&utm_source=cypress&utm_medium=referral&utm_campaign=202110_globe_en_all_integration-files
 # ref2: https://community.infineon.com/t5/AIROC-Wi-Fi-and-Wi-Fi-Bluetooth/Bluetooth-audio-streaming-WiFi-inteference/td-p/379269
 # wl tool: https://github.com/murata-wireless/cyw-fmac-utils-imx64
 
 # coex mode, 1: full TDM, 4, BT prioritized, 5: simul
 # firmware sticks to 1, and can only be changed with `wl`
-btc_mode=5
+#btc_mode=5
 # bt deferral limit, default 0x4e20/20000
-btc_params8=5000
+#btc_params8=5000
 # wlam ps mode duaration us, default 0x7530/30000, may be changed on demand with param 8
-btc_params1=20000
+#btc_params1=20000
 # BT priority, default 0x172c/5932
-btc_params50=0xa72c
+#btc_params50=0xa72c
 # peri mode, default 0x61a8/25000
-btc_params9=40000
+#btc_params9=40000
