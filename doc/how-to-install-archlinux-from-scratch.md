@@ -2,6 +2,8 @@
 
 _DRAFT_
 
+> Now I recommend to use the scripts at [PotatoMania/uconsole-cm3-arch-image-builder](https://github.com/PotatoMania/uconsole-cm3-arch-image-builder) to build the OS image.
+
 > It looks like there's a more detailed guide at [Autianic/clockworkpi-linux](https://github.com/Autianic/clockworkpi-linux#arch-linux-arm-chroot-environment-setup). It tells how to build the packages and how to make the partitions.
 > The exception is that CM3 can only boot from a fat partition on a MBR partition table, with a proprietary bootloader. So no u-boot related stuff is necessary.
 
@@ -140,25 +142,43 @@ Now quit the rootfs.
 Edit `/mnt/boot/config.txt` and write the following text:
 
 ```
+[all]
 ignore_lcd=1
 disable_fw_kms_setup=1
-max_framebuffers=2
-arm_boost=1
+disable_audio_dither
+pwm_sample_bits=20
 
 # setup headphone detect pin
 gpio=10=ip,np
 
-# boot kernel directly
+# boot custom kernel
 kernel=Image.gz
 arm_64bit=1
 initramfs initramfs-linux.img followkernel
 
-# overlays
+[all]
 dtoverlay=dwc2,dr_mode=host
-dtoverlay=vc4-kms-v3d
 dtoverlay=audremap,pins_12_13
 dtparam=audio=on
+
+[pi3]
+dtoverlay=vc4-kms-v3d
 dtoverlay=uconsole
+
+[cm4]
+arm_boost=1
+max_framebuffers=2
+dtoverlay=vc4-kms-v3d-pi4
+dtoverlay=uconsole,cm4,hwi2c
+
+[cm4s]
+arm_boost=1
+max_framebuffers=2
+dtoverlay=vc4-kms-v3d-pi4
+dtoverlay=uconsole,hwi2c
+
+[all]
+# whatever you need
 ```
 
 _Note: The kernel command line can be changed by editing `/mnt/boot/cmdline.txt`._

@@ -21,11 +21,16 @@ I started from archlinuxarm's linux-aarch64. ~~It looks like RPi3's mainline sup
     - [x] Bluetooth works
     - [x] PMU works
         - the charging indicator/LED uses the same hack from CPi's patch, now LED will stay on when charging
+        - CM3's I2C0 is buggy and cannot be used for PMU, use i2c-gpio instead
     - [x] DSI panel works
         - There will be some error messages from kernel when screen is turned off, and it seems safe to ignore them.
     - [x] Audio works
         - [x] with 3.5mm jack detection
             - A better virtual sound card mode should be implemented to maintain different volume values for different outputs. But I don't know how. Help wanted.
+- [ ] CM4 support
+    - have no CM4 so cannot test
+- [x] CM4S support
+    - tested on a CM4S (CM4S01016B) board, everything works
 - ~~[ ] trim build config~~
 - [ ] setup CI/CD?
 
