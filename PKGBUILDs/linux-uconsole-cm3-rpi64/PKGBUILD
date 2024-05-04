@@ -176,7 +176,7 @@ _package() {
     DEPMOD=/doesnt/exist modules_install  # Suppress depmod
 
   # remove build and source links
-  rm "$modulesdir"/{source,build}
+  rm -f "$modulesdir"/{source,build}
 
   # sed expression for following substitutions
   local _subst="
