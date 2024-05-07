@@ -130,7 +130,7 @@ pacman-key --init
 pacman-key --populate archlinuxarm
 # then install packages
 pacman -Sy raspberrypi-bootloader firmware-raspberrypi
-pacman -U --noconfirm linux-uconsole-cm3-rpi64*.pkg.zst
+pacman -U linux-uconsole-cm3-rpi64*.pkg.zst
 ```
 
 _Note: preinstalled `linux-aarch64` is uninstalled when installing `linux-uconsole-cm3-rpi64`._
